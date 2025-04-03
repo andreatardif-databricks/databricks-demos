@@ -53,23 +53,14 @@ def get_connection(http_path):
         credentials_provider=lambda: cfg.authenticate,
     )
 
-
 def create_table_from_volume_file(catalog, schema, volume_name, file_name, table_name, conn):
     with conn.cursor() as cursor:
-        query1 = f"""
+        cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS {catalog}.{schema}.{table_name}
-        USING DELTA;
-        """
-        cursor.execute(query1)
-
-        query2 = f"""COPY INTO {catalog}.{schema}.{table_name}
-        FROM '/Volumes/{catalog}/{schema}/{volume_name}/{file_name}'
-        FILEFORMAT = CSV
-        FORMAT_OPTIONS ('header' = 'true', 'inferSchema' = 'true')
-        COPY_OPTIONS ('mergeSchema' = 'true');
-        """
-        cursor.execute(query2)
-
+        AS SELECT * FROM read_files("/Volumes/{catalog}/{schema}/{volume_name}/{file_name}",
+                                    format => "csv",
+                                    header => "true");
+        """)
 
 if "volume_check_success" not in st.session_state:
     st.session_state.volume_check_success = False
